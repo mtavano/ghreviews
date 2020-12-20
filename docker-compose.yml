@@ -1,0 +1,14 @@
+version: "3"
+services:
+  postgres:
+    image: "postgres:11-alpine"
+    container_name: "ghreviews-postgres"
+    environment:
+      - POSTGRES_USER=apipath
+      - POSTGRES_PASSWORD=apipath
+      - POSTGRES_DB=ghreviews
+    ports:
+      - "54320:5432"
+    volumes:
+      - ./inittestdb.sh:/docker-entrypoint-initdb.d/inittestdb.sh
+      - ./pg-data:/var/lib/postgresql/data
