@@ -1,0 +1,21 @@
+type Mutation {
+  createReview(reviewInput: CreateReviewInput!): Review
+}
+
+# type Subscription {
+#   joinRoom(roomId: ID!, userId: ID!, userName: String!, role: Role!): OnlineRoom
+# }
+
+type CreateRoomInput {
+  githubUsername: String!
+  githubAvatarURL: String!
+  content: String!
+}
+
+type Review {
+  id: ID!
+  githubUsername: String!
+  githubAvatarURL: String!
+  content: String!
+  createdAt: Number!
+}

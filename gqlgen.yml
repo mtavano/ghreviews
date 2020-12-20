@@ -1,0 +1,25 @@
+# .gqlgen.yml example
+#
+# Refer to https://gqlgen.com/config/
+# for detailed .gqlgen.yml documentation.
+
+schema:
+  - pkg/graph/*.graphql
+exec:
+  filename: pkg/graph/exec.go
+model:
+  filename: pkg/graph/model.go
+resolver:
+  filename: pkg/graph/resolver.go
+  type: Resolver
+# autobind:
+#   - github.com/mtavano/ghreviews/ghreviews
+# models:
+#   Review:
+#     model: ppoker.Room
+#   Point:
+#     model: ppoker.Point
+#   Participant:
+#     model: ppoker.Participant
+#   Observer:
+#     model: ppoker.Observer
