@@ -48,6 +48,7 @@ func (r *queryResolver) GetReview(ctx context.Context, id string) (*ghreviews.Gh
 }
 
 func (r *subscriptionResolver) Feed(ctx context.Context) (<-chan []*ghreviews.GhReview, error) {
+	r.logger.Debugln("Connected: ", len(r.reviewersHub), " users")
 	rr, err := r.reviewService.GetLastReviews()
 	if err != nil {
 		return nil, err
