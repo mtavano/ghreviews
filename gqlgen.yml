@@ -12,14 +12,8 @@ model:
 resolver:
   filename: pkg/graph/resolver.go
   type: Resolver
-# autobind:
-#   - github.com/mtavano/ghreviews/ghreviews
-# models:
-#   Review:
-#     model: ppoker.Room
-#   Point:
-#     model: ppoker.Point
-#   Participant:
-#     model: ppoker.Participant
-#   Observer:
-#     model: ppoker.Observer
+autobind:
+  - github.com/mtavano/ghreviews
+models:
+  CreateReviewInput:
+    model: ghreviews.CreateReviewInput

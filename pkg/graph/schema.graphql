@@ -1,21 +1,25 @@
+type Query {
+  getReview(id: ID!): GhReview
+}
+
 type Mutation {
-  createReview(reviewInput: CreateReviewInput!): Review
+  createReview(reviewInput: CreateReviewInput!): GhReview
 }
 
 # type Subscription {
 #   joinRoom(roomId: ID!, userId: ID!, userName: String!, role: Role!): OnlineRoom
 # }
 
-type CreateRoomInput {
+input CreateReviewInput {
   githubUsername: String!
   githubAvatarURL: String!
   content: String!
 }
 
-type Review {
+type GhReview {
   id: ID!
   githubUsername: String!
   githubAvatarURL: String!
   content: String!
-  createdAt: Number!
+  createdAt: Int!
 }

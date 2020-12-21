@@ -1,6 +1,11 @@
-package ghreview
+package ghreviews
 
-import "time"
+import (
+	"context"
+
+	"github.com/99designs/gqlgen/graphql"
+	"github.com/vektah/gqlparser/v2/gqlerror"
+)
 
 var (
 	// Badges
@@ -13,30 +18,43 @@ var (
 	BadgeTalented = "talented"
 )
 
-// ReviewRecord represents a database record
-type ReviewRecord struct {
-	ID              string    `db:"id"`
-	GithubUsername  string    `db:"github_username"`
-	GithubAvatarURL string    `db:"github_avatar_url"`
-	Content         string    `db:"content"`
-	Badge           *string   `db:"badge"`
-	CreatedAt       time.Time `db:"created_at"`
-}
-
-// ToGhReview returns a ToGhReview pointer
-func (rr *ReviewRecord) ToGhReview() *GhReview {
-	return &GhReview{
-		GithubUsername:  rr.GithubUsername,
-		GithubAvatarURL: rr.GithubAvatarURL,
-		Content:         rr.Content,
-		Badge:           rr.Badge,
-	}
+type ReviewService interface {
+	CreateReview(githubUsername, githubAvatarUrl, content string) (*GhReview, error)
 }
 
 // GhReview represents a github review app model
 type GhReview struct {
-	GithubUsername  string  `json:"github_username" validate:"required"`
-	GithubAvatarURL string  `json:"github_avatar_url"`
-	Content         string  `json:"content" validate:"required"`
-	Badge           *string `json:"badge" validate:"omitempty,eq=master|cool|talented"`
+	ID              string  `json:"id"`
+	GithubUsername  string  `json:"githubUsername"`
+	GithubAvatarURL string  `json:"githubAvatarUrl"`
+	Content         string  `json:"content"`
+	Badge           *string `json:"badge"`
+	CreatedAt       int64   `json:"createdAt"`
+}
+
+type CreateReviewInput struct {
+	GithubUsername  string `json:"githubUsername" validate:"required"`
+	GithubAvatarURL string `json:"githubAvatarUrl"`
+	Content         string `json:"content" validate:"required"`
+}
+
+type ServiceError struct {
+	Code        uint
+	Description string
+	Err         error
+}
+
+func (e ServiceError) Error() string {
+	return e.Description
+}
+
+func (e ServiceError) Unwrap() error {
+	return e.Err
+}
+
+func NewNotFoundErr(ctx context.Context, err error) *gqlerror.Error {
+	return &gqlerror.Error{Message: err.Error(), Path: graphql.GetPath(ctx), Extensions: map[string]interface{}{
+		"code":        404,
+		"description": "Resource not found",
+	}}
 }
