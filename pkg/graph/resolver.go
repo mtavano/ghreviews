@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"sync"
 
 	"github.com/mtavano/ghreviews"
 	"github.com/sirupsen/logrus"
@@ -10,14 +11,16 @@ import (
 type Resolver struct {
 	reviewService ghreviews.ReviewService
 	logger        *logrus.Logger
-	reviewersHub  map[chan []*ghreviews.GhReview]bool
+
+	mu           sync.RWMutex
+	reviewersHub map[chan []*ghreviews.GhReview]bool
 }
 
 func NewResolver(logger *logrus.Logger, reviewService ghreviews.ReviewService) *Resolver {
 	return &Resolver{
-		reviewService,
-		logger,
-		make(map[chan []*ghreviews.GhReview]bool),
+		reviewService: reviewService,
+		logger:        logger,
+		reviewersHub:  make(map[chan []*ghreviews.GhReview]bool),
 	}
 }
 
@@ -34,6 +37,8 @@ func (r *mutationResolver) CreateReview(ctx context.Context, reviewInput ghrevie
 
 	msg := []*ghreviews.GhReview{review}
 	go func() {
+		r.mu.RLock()
+		defer r.mu.RUnlock()
 		for channel := range r.reviewersHub {
 			channel <- msg
 		}
@@ -48,7 +53,9 @@ func (r *queryResolver) GetReview(ctx context.Context, id string) (*ghreviews.Gh
 }
 
 func (r *subscriptionResolver) Feed(ctx context.Context) (<-chan []*ghreviews.GhReview, error) {
+	r.mu.RLock()
 	r.logger.Debugln("Connected: ", len(r.reviewersHub), " users")
+	r.mu.RUnlock()
 	rr, err := r.reviewService.GetLastReviews()
 	if err != nil {
 		return nil, err
@@ -56,10 +63,14 @@ func (r *subscriptionResolver) Feed(ctx context.Context) (<-chan []*ghreviews.Gh
 
 	// Add channel to hub
 	cr := make(chan []*ghreviews.GhReview, 1)
+	r.mu.Lock()
 	r.reviewersHub[cr] = true
+	r.mu.Unlock()
 	go func() {
 		<-ctx.Done()
+		r.mu.Lock()
 		delete(r.reviewersHub, cr)
+		r.mu.UnLock()
 	}()
 
 	cr <- rr
