@@ -8,6 +8,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var _ ghreviews.ReviewService = &reviewService{}
+
 type reviewService struct {
 	store  *database.Store
 	logger *logrus.Logger
@@ -27,4 +29,18 @@ func (r *reviewService) CreateReview(githubUsername, githubAvatarUrl, content st
 	}
 
 	return review.ToGhReview(), nil
+}
+
+func (r *reviewService) GetLastReviews() ([]*ghreviews.GhReview, error) {
+	rr, err := r.store.GetLastReviews(context.Background(), 10)
+	if err != nil {
+		return nil, err
+	}
+
+	reviews := make([]*ghreviews.GhReview, len(*rr))
+	for i := range *rr {
+		reviews[i] = (*rr)[i].ToGhReview()
+	}
+
+	return reviews, nil
 }

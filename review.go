@@ -20,6 +20,7 @@ var (
 
 type ReviewService interface {
 	CreateReview(githubUsername, githubAvatarUrl, content string) (*GhReview, error)
+	GetLastReviews() ([]*GhReview, error)
 }
 
 // GhReview represents a github review app model

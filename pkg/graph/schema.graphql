@@ -6,9 +6,9 @@ type Mutation {
   createReview(reviewInput: CreateReviewInput!): GhReview
 }
 
-# type Subscription {
-#   joinRoom(roomId: ID!, userId: ID!, userName: String!, role: Role!): OnlineRoom
-# }
+type Subscription {
+  feed: [GhReview!]!
+}
 
 input CreateReviewInput {
   githubUsername: String!
