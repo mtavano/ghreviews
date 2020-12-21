@@ -36,7 +36,6 @@ func NewServer(r *Resolver, isProduction bool) *handler.Server {
 	srv.SetQueryCache(lru.New(1000))
 
 	if !isProduction {
-		r.logger.Debugln("instropectioonnn")
 		srv.Use(extension.Introspection{})
 	}
 	srv.Use(extension.AutomaticPersistedQuery{
