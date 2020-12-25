@@ -13,18 +13,18 @@ type Resolver struct {
 	logger        *logrus.Logger
 
 	publicHubMU sync.RWMutex
-	publicHub   map[chan []*ghreviews.GhReview]bool
+	publicHub   map[chan *GhReviewsEvent]bool
 
 	privateHubMU sync.RWMutex
-	privateHub   map[string][](chan []*ghreviews.GhReview)
+	privateHub   map[string][](chan *GhReviewsEvent)
 }
 
 func NewResolver(logger *logrus.Logger, reviewService ghreviews.ReviewService) *Resolver {
 	return &Resolver{
 		reviewService: reviewService,
 		logger:        logger,
-		publicHub:     make(map[chan []*ghreviews.GhReview]bool),
-		privateHub:    make(map[string][]chan []*ghreviews.GhReview),
+		publicHub:     make(map[chan *GhReviewsEvent]bool),
+		privateHub:    make(map[string][]chan *GhReviewsEvent),
 	}
 }
 
@@ -34,12 +34,16 @@ func (r *mutationResolver) CreateReview(ctx context.Context, reviewInput ghrevie
 		reviewInput.GithubAvatarURL,
 		reviewInput.Content,
 	)
-
 	if err != nil {
 		return nil, err
 	}
 
-	msg := []*ghreviews.GhReview{review}
+	total, err := r.reviewService.CountReviewsByUsername(reviewInput.GithubUsername)
+	if err != nil {
+		return nil, err
+	}
+
+	msg := &GhReviewsEvent{Total: total, NewReviews: []*ghreviews.GhReview{review}}
 	go func() {
 		r.publicHubMU.RLock()
 		defer r.publicHubMU.RUnlock()
@@ -63,24 +67,25 @@ func (r *queryResolver) GetReview(ctx context.Context, id string) (*ghreviews.Gh
 	return nil, nil
 }
 
-func (r *subscriptionResolver) FeedByUsername(ctx context.Context, username string) (<-chan []*ghreviews.GhReview, error) {
+func (r *subscriptionResolver) FeedByUsername(ctx context.Context, username string) (<-chan *GhReviewsEvent, error) {
 	rr, err := r.reviewService.GetLastReviewsByUsername(username)
+	if err != nil {
+		return nil, err
+	}
+	total, err := r.reviewService.CountReviewsByUsername(username)
 	if err != nil {
 		return nil, err
 	}
 
 	// Add channel to private hub (by username)
-	cr := make(chan []*ghreviews.GhReview, 1)
+	cr := make(chan *GhReviewsEvent, 1)
 	r.privateHubMU.Lock()
-	// if r.privateHub[username] == nil {
-	// 	r.privateHub[username] = []chan []*ghreviews.GhReview{}
-	// }
 	r.privateHub[username] = append(r.privateHub[username], cr)
 	r.privateHubMU.Unlock()
 	go func() {
 		<-ctx.Done()
 		r.privateHubMU.Lock()
-		newList := []chan []*ghreviews.GhReview{}
+		newList := []chan *GhReviewsEvent{}
 		for _, c := range r.privateHub[username] {
 			if c == cr {
 				continue
@@ -92,7 +97,7 @@ func (r *subscriptionResolver) FeedByUsername(ctx context.Context, username stri
 		r.logger.Debugf("Event: 'disconnected from %q'; %d users", username, len(r.privateHub[username]))
 	}()
 
-	cr <- rr
+	cr <- &GhReviewsEvent{Total: total, NewReviews: rr}
 	r.publicHubMU.RLock()
 	r.logger.Debugf("Event: 'connected to %q'; %d users", username, len(r.privateHub[username]))
 	r.publicHubMU.RUnlock()
@@ -100,14 +105,19 @@ func (r *subscriptionResolver) FeedByUsername(ctx context.Context, username stri
 	return cr, nil
 }
 
-func (r *subscriptionResolver) Feed(ctx context.Context) (<-chan []*ghreviews.GhReview, error) {
+func (r *subscriptionResolver) Feed(ctx context.Context) (<-chan *GhReviewsEvent, error) {
 	rr, err := r.reviewService.GetLastReviews()
 	if err != nil {
 		return nil, err
 	}
 
+	total, err := r.reviewService.CountReviews()
+	if err != nil {
+		return nil, err
+	}
+
 	// Add channel to hub
-	cr := make(chan []*ghreviews.GhReview, 1)
+	cr := make(chan *GhReviewsEvent, 1)
 	r.publicHubMU.Lock()
 	r.publicHub[cr] = true
 	r.publicHubMU.Unlock()
@@ -119,7 +129,7 @@ func (r *subscriptionResolver) Feed(ctx context.Context) (<-chan []*ghreviews.Gh
 		r.logger.Debugln("Event: 'disconnected';", len(r.publicHub), "users")
 	}()
 
-	cr <- rr
+	cr <- &GhReviewsEvent{Total: total, NewReviews: rr}
 	r.publicHubMU.RLock()
 	r.logger.Debugln("Event: 'connected';", len(r.publicHub), "users")
 	r.publicHubMU.RUnlock()

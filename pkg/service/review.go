@@ -45,8 +45,8 @@ func (r *reviewService) GetLastReviews() ([]*ghreviews.GhReview, error) {
 	return reviews, nil
 }
 
-func (r *reviewService) GetLastReviewsByUsername(username string) ([]*ghreviews.GhReview, error) {
-	rr, err := r.store.GetLastReviewsByUsername(context.Background(), username, 10)
+func (r *reviewService) GetLastReviewsByUsername(githubUsername string) ([]*ghreviews.GhReview, error) {
+	rr, err := r.store.GetLastReviewsByUsername(context.Background(), githubUsername, 10)
 	if err != nil {
 		return nil, err
 	}
@@ -57,4 +57,22 @@ func (r *reviewService) GetLastReviewsByUsername(username string) ([]*ghreviews.
 	}
 
 	return reviews, nil
+}
+
+func (r *reviewService) CountReviews() (int, error) {
+	count, err := r.store.CountReviews(context.Background())
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (r *reviewService) CountReviewsByUsername(githubUsername string) (int, error) {
+	count, err := r.store.CountReviewsByUsername(context.Background(), githubUsername)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }

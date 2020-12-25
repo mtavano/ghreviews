@@ -52,6 +52,11 @@ type ComplexityRoot struct {
 		ID              func(childComplexity int) int
 	}
 
+	GhReviewsEvent struct {
+		NewReviews func(childComplexity int) int
+		Total      func(childComplexity int) int
+	}
+
 	Mutation struct {
 		CreateReview func(childComplexity int, reviewInput ghreviews.CreateReviewInput) int
 	}
@@ -73,8 +78,8 @@ type QueryResolver interface {
 	GetReview(ctx context.Context, id string) (*ghreviews.GhReview, error)
 }
 type SubscriptionResolver interface {
-	Feed(ctx context.Context) (<-chan []*ghreviews.GhReview, error)
-	FeedByUsername(ctx context.Context, username string) (<-chan []*ghreviews.GhReview, error)
+	Feed(ctx context.Context) (<-chan *GhReviewsEvent, error)
+	FeedByUsername(ctx context.Context, username string) (<-chan *GhReviewsEvent, error)
 }
 
 type executableSchema struct {
@@ -126,6 +131,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.GhReview.ID(childComplexity), true
+
+	case "GhReviewsEvent.newReviews":
+		if e.complexity.GhReviewsEvent.NewReviews == nil {
+			break
+		}
+
+		return e.complexity.GhReviewsEvent.NewReviews(childComplexity), true
+
+	case "GhReviewsEvent.total":
+		if e.complexity.GhReviewsEvent.Total == nil {
+			break
+		}
+
+		return e.complexity.GhReviewsEvent.Total(childComplexity), true
 
 	case "Mutation.createReview":
 		if e.complexity.Mutation.CreateReview == nil {
@@ -260,8 +279,8 @@ type Mutation {
 }
 
 type Subscription {
-  feed: [GhReview!]!
-  feedByUsername(username: String!): [GhReview!]!
+  feed: GhReviewsEvent!
+  feedByUsername(username: String!): GhReviewsEvent!
 }
 
 input CreateReviewInput {
@@ -276,6 +295,11 @@ type GhReview {
   githubAvatarURL: String!
   content: String!
   createdAt: Int!
+}
+
+type GhReviewsEvent {
+  total: Int!
+  newReviews: [GhReview!]!
 }
 `, BuiltIn: false},
 }
@@ -558,6 +582,76 @@ func (ec *executionContext) _GhReview_createdAt(ctx context.Context, field graph
 	return ec.marshalNInt2int64(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _GhReviewsEvent_total(ctx context.Context, field graphql.CollectedField, obj *GhReviewsEvent) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "GhReviewsEvent",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Total, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _GhReviewsEvent_newReviews(ctx context.Context, field graphql.CollectedField, obj *GhReviewsEvent) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "GhReviewsEvent",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.NewReviews, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ghreviews.GhReview)
+	fc.Result = res
+	return ec.marshalNGhReview2ᚕᚖgithubᚗcomᚋmtavanoᚋghreviewsᚐGhReviewᚄ(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Mutation_createReview(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -738,7 +832,7 @@ func (ec *executionContext) _Subscription_feed(ctx context.Context, field graphq
 		return nil
 	}
 	return func() graphql.Marshaler {
-		res, ok := <-resTmp.(<-chan []*ghreviews.GhReview)
+		res, ok := <-resTmp.(<-chan *GhReviewsEvent)
 		if !ok {
 			return nil
 		}
@@ -746,7 +840,7 @@ func (ec *executionContext) _Subscription_feed(ctx context.Context, field graphq
 			w.Write([]byte{'{'})
 			graphql.MarshalString(field.Alias).MarshalGQL(w)
 			w.Write([]byte{':'})
-			ec.marshalNGhReview2ᚕᚖgithubᚗcomᚋmtavanoᚋghreviewsᚐGhReviewᚄ(ctx, field.Selections, res).MarshalGQL(w)
+			ec.marshalNGhReviewsEvent2ᚖgithubᚗcomᚋmtavanoᚋghreviewsᚋpkgᚋgraphᚐGhReviewsEvent(ctx, field.Selections, res).MarshalGQL(w)
 			w.Write([]byte{'}'})
 		})
 	}
@@ -790,7 +884,7 @@ func (ec *executionContext) _Subscription_feedByUsername(ctx context.Context, fi
 		return nil
 	}
 	return func() graphql.Marshaler {
-		res, ok := <-resTmp.(<-chan []*ghreviews.GhReview)
+		res, ok := <-resTmp.(<-chan *GhReviewsEvent)
 		if !ok {
 			return nil
 		}
@@ -798,7 +892,7 @@ func (ec *executionContext) _Subscription_feedByUsername(ctx context.Context, fi
 			w.Write([]byte{'{'})
 			graphql.MarshalString(field.Alias).MarshalGQL(w)
 			w.Write([]byte{':'})
-			ec.marshalNGhReview2ᚕᚖgithubᚗcomᚋmtavanoᚋghreviewsᚐGhReviewᚄ(ctx, field.Selections, res).MarshalGQL(w)
+			ec.marshalNGhReviewsEvent2ᚖgithubᚗcomᚋmtavanoᚋghreviewsᚋpkgᚋgraphᚐGhReviewsEvent(ctx, field.Selections, res).MarshalGQL(w)
 			w.Write([]byte{'}'})
 		})
 	}
@@ -1982,6 +2076,38 @@ func (ec *executionContext) _GhReview(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
+var ghReviewsEventImplementors = []string{"GhReviewsEvent"}
+
+func (ec *executionContext) _GhReviewsEvent(ctx context.Context, sel ast.SelectionSet, obj *GhReviewsEvent) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, ghReviewsEventImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("GhReviewsEvent")
+		case "total":
+			out.Values[i] = ec._GhReviewsEvent_total(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "newReviews":
+			out.Values[i] = ec._GhReviewsEvent_newReviews(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -2385,6 +2511,20 @@ func (ec *executionContext) marshalNGhReview2ᚖgithubᚗcomᚋmtavanoᚋghrevie
 	return ec._GhReview(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNGhReviewsEvent2githubᚗcomᚋmtavanoᚋghreviewsᚋpkgᚋgraphᚐGhReviewsEvent(ctx context.Context, sel ast.SelectionSet, v GhReviewsEvent) graphql.Marshaler {
+	return ec._GhReviewsEvent(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNGhReviewsEvent2ᚖgithubᚗcomᚋmtavanoᚋghreviewsᚋpkgᚋgraphᚐGhReviewsEvent(ctx context.Context, sel ast.SelectionSet, v *GhReviewsEvent) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._GhReviewsEvent(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalID(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -2392,6 +2532,21 @@ func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface
 
 func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
 	res := graphql.MarshalID(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
+	res, err := graphql.UnmarshalInt(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
+	res := graphql.MarshalInt(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")

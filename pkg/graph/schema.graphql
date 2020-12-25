@@ -7,8 +7,8 @@ type Mutation {
 }
 
 type Subscription {
-  feed: [GhReview!]!
-  feedByUsername(username: String!): [GhReview!]!
+  feed: GhReviewsEvent!
+  feedByUsername(username: String!): GhReviewsEvent!
 }
 
 input CreateReviewInput {
@@ -23,4 +23,9 @@ type GhReview {
   githubAvatarURL: String!
   content: String!
   createdAt: Int!
+}
+
+type GhReviewsEvent {
+  total: Int!
+  newReviews: [GhReview!]!
 }
