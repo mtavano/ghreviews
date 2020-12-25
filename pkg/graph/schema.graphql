@@ -8,6 +8,7 @@ type Mutation {
 
 type Subscription {
   feed: [GhReview!]!
+  feedByUsername(username: String!): [GhReview!]!
 }
 
 input CreateReviewInput {

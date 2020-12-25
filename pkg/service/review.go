@@ -44,3 +44,17 @@ func (r *reviewService) GetLastReviews() ([]*ghreviews.GhReview, error) {
 
 	return reviews, nil
 }
+
+func (r *reviewService) GetLastReviewsByUsername(username string) ([]*ghreviews.GhReview, error) {
+	rr, err := r.store.GetLastReviewsByUsername(context.Background(), username, 10)
+	if err != nil {
+		return nil, err
+	}
+
+	reviews := make([]*ghreviews.GhReview, len(*rr))
+	for i := range *rr {
+		reviews[i] = (*rr)[i].ToGhReview()
+	}
+
+	return reviews, nil
+}

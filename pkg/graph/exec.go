@@ -61,7 +61,8 @@ type ComplexityRoot struct {
 	}
 
 	Subscription struct {
-		Feed func(childComplexity int) int
+		Feed           func(childComplexity int) int
+		FeedByUsername func(childComplexity int, username string) int
 	}
 }
 
@@ -73,6 +74,7 @@ type QueryResolver interface {
 }
 type SubscriptionResolver interface {
 	Feed(ctx context.Context) (<-chan []*ghreviews.GhReview, error)
+	FeedByUsername(ctx context.Context, username string) (<-chan []*ghreviews.GhReview, error)
 }
 
 type executableSchema struct {
@@ -155,6 +157,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Subscription.Feed(childComplexity), true
+
+	case "Subscription.feedByUsername":
+		if e.complexity.Subscription.FeedByUsername == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_feedByUsername_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.FeedByUsername(childComplexity, args["username"].(string)), true
 
 	}
 	return 0, false
@@ -247,6 +261,7 @@ type Mutation {
 
 type Subscription {
   feed: [GhReview!]!
+  feedByUsername(username: String!): [GhReview!]!
 }
 
 input CreateReviewInput {
@@ -312,6 +327,21 @@ func (ec *executionContext) field_Query_getReview_args(ctx context.Context, rawA
 		}
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_feedByUsername_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["username"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["username"] = arg0
 	return args, nil
 }
 
@@ -696,6 +726,58 @@ func (ec *executionContext) _Subscription_feed(ctx context.Context, field graphq
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return ec.resolvers.Subscription().Feed(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return nil
+	}
+	return func() graphql.Marshaler {
+		res, ok := <-resTmp.(<-chan []*ghreviews.GhReview)
+		if !ok {
+			return nil
+		}
+		return graphql.WriterFunc(func(w io.Writer) {
+			w.Write([]byte{'{'})
+			graphql.MarshalString(field.Alias).MarshalGQL(w)
+			w.Write([]byte{':'})
+			ec.marshalNGhReview2ᚕᚖgithubᚗcomᚋmtavanoᚋghreviewsᚐGhReviewᚄ(ctx, field.Selections, res).MarshalGQL(w)
+			w.Write([]byte{'}'})
+		})
+	}
+}
+
+func (ec *executionContext) _Subscription_feedByUsername(ctx context.Context, field graphql.CollectedField) (ret func() graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = nil
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Subscription_feedByUsername_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Subscription().FeedByUsername(rctx, args["username"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1984,6 +2066,8 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 	switch fields[0].Name {
 	case "feed":
 		return ec._Subscription_feed(ctx, fields[0])
+	case "feedByUsername":
+		return ec._Subscription_feedByUsername(ctx, fields[0])
 	default:
 		panic("unknown field " + strconv.Quote(fields[0].Name))
 	}
