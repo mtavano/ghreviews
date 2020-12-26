@@ -93,13 +93,15 @@ func (r *subscriptionResolver) FeedByUsername(ctx context.Context, username stri
 			newList = append(newList, c)
 		}
 		r.privateHub[username] = newList
+		hubSize := len(r.privateHub[username])
 		r.privateHubMU.Unlock()
-		r.logger.Debugf("Event: 'disconnected from %q'; %d users", username, len(r.privateHub[username]))
+		r.logger.Debugf("Event: 'disconnected from %q'; %d users", username, hubSize)
 	}()
 
 	cr <- &GhReviewsEvent{Total: total, NewReviews: rr}
 	r.publicHubMU.RLock()
-	r.logger.Debugf("Event: 'connected to %q'; %d users", username, len(r.privateHub[username]))
+	hubSize := len(r.privateHub[username])
+	r.logger.Debugf("Event: 'connected to %q'; %d users", username, hubSize)
 	r.publicHubMU.RUnlock()
 
 	return cr, nil
@@ -120,18 +122,20 @@ func (r *subscriptionResolver) Feed(ctx context.Context) (<-chan *GhReviewsEvent
 	cr := make(chan *GhReviewsEvent, 1)
 	r.publicHubMU.Lock()
 	r.publicHub[cr] = true
+	hubSize := len(r.publicHub)
 	r.publicHubMU.Unlock()
 	go func() {
 		<-ctx.Done()
 		r.publicHubMU.Lock()
 		delete(r.publicHub, cr)
 		r.publicHubMU.Unlock()
-		r.logger.Debugln("Event: 'disconnected';", len(r.publicHub), "users")
+		r.logger.Debugln("Event: 'disconnected';", hubSize, "users")
 	}()
 
 	cr <- &GhReviewsEvent{Total: total, NewReviews: rr}
 	r.publicHubMU.RLock()
-	r.logger.Debugln("Event: 'connected';", len(r.publicHub), "users")
+	hubSize = len(r.publicHub)
+	r.logger.Debugln("Event: 'connected';", hubSize, "users")
 	r.publicHubMU.RUnlock()
 
 	return cr, nil
